@@ -35,7 +35,7 @@ public class Backup {
         File worldFolder = new File(filePath);
 
         if (filePath.equalsIgnoreCase("@server")) {
-            filePath = new File(".").getPath();
+            filePath = new File("server").getPath();
             worldFolder = new File(filePath);
         }
 
