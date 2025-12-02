@@ -1,6 +1,7 @@
 package net.server_backup.utils;
 
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.sftp.SFTPClient;
 import net.server_backup.ServerBackup;
 import org.bukkit.command.CommandSender;
 
@@ -44,12 +45,12 @@ public class SftpManager {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
-    private void connect(SSHClient client) throws IOException {
+    private SFTPClient connect() throws IOException {
         // TODO: Implement
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
-    private void disconnect(SSHClient client) throws IOException {
+    private void disconnect(SFTPClient  client) throws IOException {
         // TODO: Implement
         throw new UnsupportedOperationException("Not implemented yet");
     }
