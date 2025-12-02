@@ -2,6 +2,7 @@ package net.server_backup.commands;
 
 import net.server_backup.Configuration;
 import net.server_backup.utils.FtpManager;
+import net.server_backup.utils.SftpManager;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -30,6 +31,7 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                 commands.add("zip");
                 commands.add("unzip");
                 commands.add("ftp");
+                commands.add("sftp");
                 commands.add("dropbox");
                 commands.add("tasks");
                 commands.add("shutdown");
@@ -82,6 +84,10 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                     commands.add("list");
                     commands.add("download");
                     commands.add("upload");
+                } else if (args[0].equalsIgnoreCase("sftp")) {
+                    commands.add("list");
+                    commands.add("download");
+                    commands.add("upload");
                 } else if (args[0].equalsIgnoreCase("dropbox")) {
                     commands.add("upload");
                 }
@@ -93,6 +99,25 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                         FtpManager ftpm = new FtpManager(sender);
 
                         List<String> backups = ftpm.getFtpBackupList(false);
+
+                        for (String backup : backups) {
+                            commands.add(backup.split(" ")[1]);
+                        }
+                    } else if (args[1].equalsIgnoreCase("upload")) {
+                        File[] backups = new File(Configuration.backupDestination + "").listFiles();
+
+                        for (File backup : backups) {
+                            if (backup.getName().endsWith(".zip")) {
+                                commands.add(backup.getName());
+                            }
+                        }
+                    }
+
+                } else if (args[0].equalsIgnoreCase("sftp")) {
+                    if (args[1].equalsIgnoreCase("download")) {
+                        SftpManager sftpm = new SftpManager(sender);
+
+                        List<String> backups = sftpm.getSftpBackupList(false);
 
                         for (String backup : backups) {
                             commands.add(backup.split(" ")[1]);

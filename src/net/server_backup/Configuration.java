@@ -60,8 +60,8 @@ public class Configuration {
                         + "\nBackupLimiter - Type '0' to disable this feature. If you don't type '0' the feature 'DeleteOldBackups' will be disabled and this feature ('BackupLimiter') will be enabled."
                         + "\nKeepUniqueBackups - Type 'true' to disable the deletion of unique backups. The plugin will keep the newest backup of all backed up worlds or folders, no matter how old it is."
                         + "\nBlacklist - A list of files/directories that will not be backed up."
-                        + "\nIMPORTANT FTP information: Set 'UploadBackup' to 'true' if you want to store your backups on a ftp server (sftp does not work at the moment - if you host your own server (e.g. vps/root server) you need to set up a ftp server on it)."
-                        + "\nIf you use ftp backups, you can set 'DeleteLocalBackup' to 'true' if you want the plugin to remove the created backup from your server once it has been uploaded to your ftp server."
+                        + "\nSet 'UploadBackup' to 'true' if you want to store your backups on a ftp/sftp server."
+                        + "\nIf you use ftp/sftp backups, you can set 'DeleteLocalBackup' to 'true' if you want the plugin to remove the created backup from your server once it has been uploaded to your ftp/sftp server."
                         + "\nCompressBeforeUpload compresses the backup to a zip file before uploading it. Set it to 'false' if you want the files to be uploaded directly to your ftp server."
                         + "\nJoin the discord server if you need help or have a question: https://discord.gg/rNzngsCWFC");
         ServerBackup.getInstance().getConfig().options().copyDefaults(true);
@@ -118,6 +118,14 @@ public class Configuration {
         ServerBackup.getInstance().getConfig().addDefault("Ftp.Server.User", "username");
         ServerBackup.getInstance().getConfig().addDefault("Ftp.Server.Password", "password");
         ServerBackup.getInstance().getConfig().addDefault("Ftp.Server.BackupDirectory", "Backups/");
+
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.UploadBackup", false);
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.DeleteLocalBackup", false);
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.IP", "127.0.0.1");
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Port", 21);
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.User", "username");
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Password", "password");
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.BackupDirectory", "Backups/");
 
         ServerBackup.getInstance().getConfig().addDefault("DynamicBackup", false);
         ServerBackup.getInstance().getConfig().addDefault("SendLogMessages", false);

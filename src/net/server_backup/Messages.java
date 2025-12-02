@@ -40,6 +40,10 @@ public class Messages {
         messages.addDefault("Info.FtpUploadSuccess", "Ftp: Upload successfully. Backup stored on ftp server.");
         messages.addDefault("Info.FtpDownload", "Ftp: Downloading backup [%file%] ...");
         messages.addDefault("Info.FtpDownloadSuccess", "Ftp: Download successful. Backup downloaded from ftp server.");
+        messages.addDefault("Info.SftpUpload", "Sftp: Uploading backup [%file%] ...");
+        messages.addDefault("Info.SftpUploadSuccess", "Sftp: Upload successfully. Backup stored on sftp server.");
+        messages.addDefault("Info.SftpDownload", "Sftp: Downloading backup [%file%] ...");
+        messages.addDefault("Info.SftpDownloadSuccess", "Sftp: Download successful. Backup downloaded from sftp server.");
 
         messages.addDefault("Error.NoPermission", "&cI'm sorry but you do not have permission to perform this command.");
         messages.addDefault("Error.NoBackups", "No backups found.");
@@ -59,6 +63,11 @@ public class Messages {
         messages.addDefault("Error.FtpLocalDeletionFailed", "Ftp: Local backup deletion failed because the uploaded file was not found on the ftp server. Try again.");
         messages.addDefault("Error.FtpNotFound", "Ftp: ftp-backup %file% not found.");
         messages.addDefault("Error.FtpConnectionFailed", "Ftp: Error while connecting to FTP server.");
+        messages.addDefault("Error.SftpUploadFailed", "Sftp: Error while uploading backup to sftp server. Check server details in config.yml (ip, port, user, password).");
+        messages.addDefault("Error.SftpDownloadFailed", "Sftp: Error while downloading backup to sftp server. Check server details in config.yml (ip, port, user, password).");
+        messages.addDefault("Error.SftpLocalDeletionFailed", "Sftp: Local backup deletion failed because the uploaded file was not found on the sftp server. Try again.");
+        messages.addDefault("Error.SftpNotFound", "Sftp: sftp-backup %file% not found.");
+        messages.addDefault("Error.SftpConnectionFailed", "Sftp: Error while connecting to SFTP server.");
 
         Configuration.saveMessages();
 
