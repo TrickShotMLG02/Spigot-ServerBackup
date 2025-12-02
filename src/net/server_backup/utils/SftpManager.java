@@ -2,14 +2,17 @@ package net.server_backup.utils;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.SecurityUtils;
-import net.schmizz.sshj.sftp.RemoteResourceFilter;
 import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.HostKeyVerifier;
+import net.schmizz.sshj.xfer.FileSystemFile;
+import net.server_backup.Configuration;
 import net.server_backup.ServerBackup;
+import net.server_backup.core.OperationHandler;
 import org.bukkit.command.CommandSender;
 
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Paths;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,25 +32,213 @@ public class SftpManager {
         this.sender = sender;
     }
 
-    boolean isSSL = true;
+    ServerBackup backup = ServerBackup.getInstance();
 
-    ServerBackup serverBackup = ServerBackup.getInstance();
+    /***
+     * Creates the Remote Path including Working Directory and a relative Path
+     * @param relativePath The relative path starting from the working directory
+     * @return The full path from the root of the sftp session
+     */
+    private String getRemotePath(String relativePath) {
+        // convert \\ to / since sftp expects only /
+        return Paths.get(working_dir, relativePath).toString().replace('\\', '/');
+    }
 
+    /**
+     * Uploads a local file to the configured SFTP server.
+     * <p>
+     * Resolves the given {@code filePath}, connects to the SFTP server,
+     * uploads the file to the remote path, and optionally deletes the local file
+     * if configured. Sends messages to {@code sender} about progress and success/failure.
+     * </p>
+     *
+     * @param filePath the path of the local file to upload
+     * @param direct   currently unused flag indicating direct upload
+     */
     public void uploadFileToSftp(String filePath, boolean direct) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        File file = new File(filePath);
+
+        if (!file.getPath().contains(Configuration.backupDestination.replaceAll("/", ""))) {
+            file = new File(Configuration.backupDestination + "//" + filePath);
+            filePath = file.getPath();
+        }
+
+        if (!file.exists()) {
+            sender.sendMessage(OperationHandler.processMessage("Error.NoBackupFound").replaceAll("%file%", file.getName()));
+
+            return;
+        }
+
+        SSHClient sshClient = new SSHClient();
+        SFTPClient sftpClient = null;
+
+        try {
+            sftpClient = connect(sshClient);
+
+            sender.sendMessage(OperationHandler.processMessage("Info.SftpUpload").replaceAll("%file%", file.getName()));
+            OperationHandler.tasks.add("SFTP UPLOAD {" + filePath + "}");
+
+
+            try {
+                FileSystemFile localFile = new FileSystemFile(file);
+                sftpClient.put(localFile, getRemotePath(filePath));
+                sender.sendMessage(OperationHandler.processMessage("Info.SftpUploadSuccess"));
+
+                if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.DeleteLocalBackup")) {
+                    boolean exists = false;
+                    for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
+                        if (backup.getName().equalsIgnoreCase(file.getName())) {
+                            exists = true;
+                        }
+                    }
+
+                    if (exists) {
+                        file.delete();
+                    } else {
+                        sender.sendMessage(OperationHandler.processMessage("Error.SftpLocalDeletionFailed"));
+                    }
+                }
+            } catch (IOException e) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpUploadFailed"));
+                e.printStackTrace();
+            }
+
+        } catch (IOException e) {
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpUploadFailed"));
+            e.printStackTrace();
+        } finally {
+            try {
+                disconnect(sftpClient, sshClient);
+            } catch (IOException e) {
+                // TODO: Handle exception here
+                e.printStackTrace();
+            }
+        }
     }
 
+    /**
+     * Downloads a file from the configured SFTP server to the local backup destination.
+     * <p>
+     * Checks if the file exists on the remote server, downloads it if found,
+     * and sends progress and status messages to {@code sender}. Handles
+     * connection and I/O exceptions and ensures the SFTP client is disconnected.
+     * </p>
+     *
+     * @param filePath the path of the file to download from the remote server
+     */
     public void downloadFileFromSftp(String filePath) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        File file = new File(filePath);
+
+        SSHClient sshClient = new SSHClient();
+        SFTPClient sftpClient = null;
+
+        try {
+            sftpClient = connect(sshClient);
+
+            boolean exists = false;
+
+            for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
+                if (backup.getName().equalsIgnoreCase(file.getName())) {
+                    exists = true;
+                }
+            }
+
+            if (!exists) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpNotFound").replaceAll("%file%", file.getName()));
+
+                return;
+            }
+
+            sender.sendMessage(OperationHandler.processMessage("Info.SftpDownload").replaceAll("%file%", file.getName()));
+
+            File dFile = new File(Configuration.backupDestination + "//" + file.getPath());
+
+            try {
+                sftpClient.get(getRemotePath(filePath), dFile.getAbsolutePath());
+                sender.sendMessage(OperationHandler.processMessage("Info.SftpDownloadSuccess"));
+            } catch (IOException e) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpDownloadFailed"));
+                e.printStackTrace();
+            }
+
+        } catch (IOException e) {
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpDownloadFailed"));
+            e.printStackTrace();
+        } finally {
+            try {
+                disconnect(sftpClient, sshClient);
+            } catch (IOException e) {
+                // TODO: Handle exception here
+                e.printStackTrace();
+            }
+        }
     }
 
+    /**
+     * Deletes a file from the configured SFTP server.
+     * <p>
+     * Checks if the specified file exists on the remote server, deletes it if found,
+     * and sends progress and status messages to {@code sender}. Handles connection
+     * and I/O exceptions and ensures the SFTP client is disconnected.
+     * </p>
+     *
+     * @param filePath the path of the file to delete on the remote server
+     */
     public void deleteFile(String filePath) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+        File file = new File(filePath);
+
+        SSHClient sshClient = new SSHClient();
+        SFTPClient sftpClient = null;
+
+        try {
+            sftpClient = connect(sshClient);
+
+            boolean exists = false;
+
+            for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
+                if (backup.getName().equalsIgnoreCase(file.getName())) {
+                    exists = true;
+                }
+            }
+
+            if (!exists) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpNotFound").replaceAll("%file%", file.getName()));
+
+                return;
+            }
+
+            sender.sendMessage(OperationHandler.processMessage("Info.FtpDeletion").replaceAll("%file%", file.getName()));
+
+            try {
+                sftpClient.rm(getRemotePath(filePath));
+                sender.sendMessage(OperationHandler.processMessage("Info.SftpDeletionSuccess"));
+            } catch (IOException e) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpDeletionFailed"));
+            }
+        } catch (IOException e) {
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpDeletionFailed"));
+            e.printStackTrace();
+        } finally {
+            try {
+                disconnect(sftpClient, sshClient);
+            } catch (IOException e) {
+                // TODO: Handle exception here
+                e.printStackTrace();
+            }
+        }
     }
 
+    /**
+     * Retrieves a list of backup files from the configured SFTP server.
+     * <p>
+     * Lists all regular files in the remote working directory and returns
+     * them either in a raw format (path:size in MB) or a formatted display
+     * string with an index and file size.
+     * </p>
+     *
+     * @param rawList if true, returns a raw "path:size" list; if false, returns a formatted list
+     * @return a list of backup file strings from the SFTP server
+     */
     public List<String> getSftpBackupList(boolean rawList) {
 
         List<String> backups = new ArrayList<>();
