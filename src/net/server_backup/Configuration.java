@@ -125,6 +125,7 @@ public class Configuration {
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Port", 21);
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.User", "username");
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Password", "password");
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Fingerprint", "SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.BackupDirectory", "Backups/");
 
         ServerBackup.getInstance().getConfig().addDefault("DynamicBackup", false);
