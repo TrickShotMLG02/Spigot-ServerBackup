@@ -2,6 +2,8 @@ package net.server_backup.utils;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.common.SecurityUtils;
+import net.schmizz.sshj.sftp.RemoteResourceFilter;
+import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.HostKeyVerifier;
 import net.server_backup.ServerBackup;
@@ -9,6 +11,7 @@ import org.bukkit.command.CommandSender;
 
 import java.io.IOException;
 import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.List;
 
 public class SftpManager {
@@ -20,6 +23,7 @@ public class SftpManager {
     private static final String user = ServerBackup.getInstance().getConfig().getString("Sftp.Server.User");
     private static final String pass = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Password");
     private static final String fingerprint = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Fingerprint");
+    private static final String working_dir = ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory");
 
     public SftpManager(CommandSender sender) {
         this.sender = sender;
@@ -45,8 +49,44 @@ public class SftpManager {
     }
 
     public List<String> getSftpBackupList(boolean rawList) {
-        // TODO: Implement
-        throw new UnsupportedOperationException("Not implemented yet");
+
+        List<String> backups = new ArrayList<>();
+
+        SSHClient sshClient = new SSHClient();
+        SFTPClient sftpClient = null;
+
+        try {
+            sftpClient = connect(sshClient);
+
+            List<RemoteResourceInfo> files = sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile);
+
+            int c = 1;
+
+            for (RemoteResourceInfo file : files) {
+                double fileSize = (double) file.getAttributes().getSize() / 1000 / 1000;
+                fileSize = Math.round(fileSize * 100.0) / 100.0;
+
+                if (rawList) {
+                    backups.add(file.getPath() + ":" + fileSize);
+                } else {
+                    backups.add("§7[" + c + "]§f " + file.getName() + " §7[" + fileSize + "MB]");
+                }
+
+                c++;
+            }
+        } catch (IOException e) {
+            // TODO: Handle exception here
+            e.printStackTrace();
+        } finally {
+            try {
+                disconnect(sftpClient, sshClient);
+            } catch (IOException e) {
+                // TODO: Handle exception here
+                e.printStackTrace();
+            }
+        }
+        return backups;
+
     }
 
     /**
