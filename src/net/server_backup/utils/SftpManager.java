@@ -24,12 +24,12 @@ public class SftpManager {
 
     ServerBackup serverBackup = ServerBackup.getInstance();
 
-    public void uploadFileToStfp(String filePath, boolean direct) {
+    public void uploadFileToSftp(String filePath, boolean direct) {
         // TODO: Implement
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
-    public void downloadFileFromStfp(String filePath) {
+    public void downloadFileFromSftp(String filePath) {
         // TODO: Implement
         throw new UnsupportedOperationException("Not implemented yet");
     }
