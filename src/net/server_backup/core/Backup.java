@@ -36,7 +36,7 @@ public class Backup {
 
         if (filePath.equalsIgnoreCase("@server")) {
             filePath = new File("server").getPath();
-            worldFolder = new File(filePath);
+            worldFolder = new File(".");
         }
 
         Date date = new Date();
@@ -101,3 +101,4 @@ public class Backup {
     }
 
 }
+
