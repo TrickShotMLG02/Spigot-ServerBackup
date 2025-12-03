@@ -306,7 +306,7 @@ public class SftpManager {
             public boolean verify(String hostname, int port, PublicKey key) {
                 return true;
 
-                // TODO: FIND A SOLUTION
+                // TODO: FIND A SOLUTION TO CHECK FINGERPRINTS, OR A WAY TO LOAD "BouncyCastle"
 
                 /*
                 String actualFingerprint = SecurityUtils.getFingerprint(key);
