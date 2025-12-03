@@ -83,7 +83,7 @@ public class SftpManager {
                 sftpClient.put(localFile, getRemotePath(file.getName()));
                 sender.sendMessage(OperationHandler.processMessage("Info.SftpUploadSuccess"));
 
-                if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.DeleteLocalBackup")) {
+                if (ServerBackup.getInstance().getConfig().getBoolean("Sftp.DeleteLocalBackup")) {
                     boolean exists = false;
                     for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
                         if (backup.getName().equalsIgnoreCase(file.getName())) {
