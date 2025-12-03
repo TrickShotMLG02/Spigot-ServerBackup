@@ -53,6 +53,7 @@ public class Messages {
         messages.addDefault("Error.FolderExists", "There is already a folder named '%file%'.");
         messages.addDefault("Error.ZipExists", "There is already a ZIP file named '%file%.zip'.");
         messages.addDefault("Error.NoFtpBackups", "No ftp backups found.");
+        messages.addDefault("Error.NoSftpBackups", "No sftp backups found.");
         messages.addDefault("Error.NoTasks", "No backup tasks are running.");
         messages.addDefault("Error.AlreadyZip", "%file% is already a ZIP file.");
         messages.addDefault("Error.NotAZip", "%file% is not a ZIP file.");
