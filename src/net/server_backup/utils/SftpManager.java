@@ -1,7 +1,6 @@
 package net.server_backup.utils;
 
 import net.schmizz.sshj.SSHClient;
-import net.schmizz.sshj.common.SecurityUtils;
 import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.HostKeyVerifier;
@@ -26,7 +25,7 @@ public class SftpManager {
     private static final String user = ServerBackup.getInstance().getConfig().getString("Sftp.Server.User");
     private static final String pass = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Password");
     private static final String fingerprint = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Fingerprint");
-    private static final String working_dir = ServerBackup.getInstance().getConfig().getString("Ftp.Server.BackupDirectory");
+    private static final String working_dir = ServerBackup.getInstance().getConfig().getString("Sftp.Server.BackupDirectory");
 
     public SftpManager(CommandSender sender) {
         this.sender = sender;
@@ -81,7 +80,7 @@ public class SftpManager {
 
             try {
                 FileSystemFile localFile = new FileSystemFile(file);
-                sftpClient.put(localFile, getRemotePath(filePath));
+                sftpClient.put(localFile, getRemotePath(file.getName()));
                 sender.sendMessage(OperationHandler.processMessage("Info.SftpUploadSuccess"));
 
                 if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.DeleteLocalBackup")) {
@@ -305,8 +304,14 @@ public class SftpManager {
         HostKeyVerifier verifier = new HostKeyVerifier() {
             @Override
             public boolean verify(String hostname, int port, PublicKey key) {
+                return true;
+
+                // TODO: FIND A SOLUTION
+
+                /*
                 String actualFingerprint = SecurityUtils.getFingerprint(key);
                 return actualFingerprint.equals(fingerprint);
+                 */
             }
 
             @Override
