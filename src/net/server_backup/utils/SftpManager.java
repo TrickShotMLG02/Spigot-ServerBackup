@@ -3,7 +3,6 @@ package net.server_backup.utils;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.SFTPClient;
-import net.schmizz.sshj.transport.verification.HostKeyVerifier;
 import net.schmizz.sshj.xfer.FileSystemFile;
 import net.server_backup.Configuration;
 import net.server_backup.ServerBackup;
@@ -11,24 +10,30 @@ import net.server_backup.core.OperationHandler;
 import org.bukkit.command.CommandSender;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 
 public class SftpManager {
 
-    private CommandSender sender;
-
-    private static final String server = ServerBackup.getInstance().getConfig().getString("Sftp.Server.IP");
-    private static final int port = ServerBackup.getInstance().getConfig().getInt("Sftp.Server.Port");
-    private static final String user = ServerBackup.getInstance().getConfig().getString("Sftp.Server.User");
-    private static final String pass = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Password");
-    private static final String fingerprint = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Fingerprint");
-    private static final String working_dir = ServerBackup.getInstance().getConfig().getString("Sftp.Server.BackupDirectory");
+    private final CommandSender sender;
+    private final String server;
+    private final int port;
+    private final String user;
+    private final String pass;
+    private final String fingerprint;
+    private final String workingDir;
 
     public SftpManager(CommandSender sender) {
         this.sender = sender;
+        this.server = ServerBackup.getInstance().getConfig().getString("Sftp.Server.IP", "127.0.0.1");
+        this.port = ServerBackup.getInstance().getConfig().getInt("Sftp.Server.Port", 22);
+        this.user = ServerBackup.getInstance().getConfig().getString("Sftp.Server.User", "");
+        this.pass = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Password", "");
+        this.fingerprint = ServerBackup.getInstance().getConfig().getString("Sftp.Server.Fingerprint", "");
+        this.workingDir = ServerBackup.getInstance().getConfig().getString("Sftp.Server.BackupDirectory", "Backups/");
     }
 
     ServerBackup backup = ServerBackup.getInstance();
@@ -38,9 +43,36 @@ public class SftpManager {
      * @param relativePath The relative path starting from the working directory
      * @return The full path from the root of the sftp session
      */
-    private String getRemotePath(String relativePath) {
-        // convert \\ to / since sftp expects only /
-        return Paths.get(working_dir, relativePath).toString().replace('\\', '/');
+    private String getRemotePath(String fileName) {
+        String directory = workingDir.replace('\\', '/');
+        while (directory.endsWith("/")) {
+            directory = directory.substring(0, directory.length() - 1);
+        }
+        return directory + "/" + fileName;
+    }
+
+    private boolean isSafeFileName(String fileName) {
+        return fileName != null && !fileName.isBlank()
+                && !fileName.equals(".") && !fileName.equals("..")
+                && !fileName.contains("/") && !fileName.contains("\\")
+                && !Paths.get(fileName).isAbsolute();
+    }
+
+    private File resolveLocalFile(String filePath) {
+        File file = new File(filePath);
+        if (!file.exists()) {
+            file = new File(Configuration.backupDestination, filePath);
+        }
+        try {
+            Path backupRoot = Paths.get(Configuration.backupDestination).toAbsolutePath().normalize();
+            Path resolved = file.getCanonicalFile().toPath();
+            if (!resolved.startsWith(backupRoot) || !Files.isRegularFile(resolved)) {
+                return null;
+            }
+            return resolved.toFile();
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     /**
@@ -55,62 +87,66 @@ public class SftpManager {
      * @param direct   currently unused flag indicating direct upload
      */
     public void uploadFileToSftp(String filePath, boolean direct) {
-        File file = new File(filePath);
+        File file = resolveLocalFile(filePath);
 
-        if (!file.getPath().contains(Configuration.backupDestination.replaceAll("/", ""))) {
-            file = new File(Configuration.backupDestination + "//" + filePath);
-            filePath = file.getPath();
-        }
-
-        if (!file.exists()) {
-            sender.sendMessage(OperationHandler.processMessage("Error.NoBackupFound").replaceAll("%file%", file.getName()));
+        if (file == null) {
+            sender.sendMessage(OperationHandler.processMessage("Error.NoBackupFound").replaceAll("%file%", new File(filePath).getName()));
 
             return;
         }
 
+        filePath = file.getPath();
+
         SSHClient sshClient = new SSHClient();
         SFTPClient sftpClient = null;
 
+        String task = "SFTP UPLOAD {" + filePath + "}";
+        boolean taskAdded = false;
         try {
             sftpClient = connect(sshClient);
 
             sender.sendMessage(OperationHandler.processMessage("Info.SftpUpload").replaceAll("%file%", file.getName()));
-            OperationHandler.tasks.add("SFTP UPLOAD {" + filePath + "}");
+            OperationHandler.tasks.add(task);
+            taskAdded = true;
 
+            FileSystemFile localFile = new FileSystemFile(file);
+            sftpClient.put(localFile, getRemotePath(file.getName()));
+            sender.sendMessage(OperationHandler.processMessage("Info.SftpUploadSuccess"));
 
-            try {
-                FileSystemFile localFile = new FileSystemFile(file);
-                sftpClient.put(localFile, getRemotePath(file.getName()));
-                sender.sendMessage(OperationHandler.processMessage("Info.SftpUploadSuccess"));
-
-                if (ServerBackup.getInstance().getConfig().getBoolean("Sftp.DeleteLocalBackup")) {
+            if (ServerBackup.getInstance().getConfig().getBoolean("Sftp.DeleteLocalBackup")) {
+                try {
                     boolean exists = false;
-                    for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
-                        if (backup.getName().equalsIgnoreCase(file.getName())) {
+                    for (RemoteResourceInfo backup : sftpClient.ls(workingDir, RemoteResourceInfo::isRegularFile)) {
+                        if (backup.getName().equals(file.getName())) {
                             exists = true;
+                            break;
                         }
                     }
 
-                    if (exists) {
-                        file.delete();
-                    } else {
+                    if (!exists || !file.delete()) {
                         sender.sendMessage(OperationHandler.processMessage("Error.SftpLocalDeletionFailed"));
                     }
+                } catch (IOException e) {
+                    sender.sendMessage(OperationHandler.processMessage("Error.SftpLocalDeletionFailed"));
+                    ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING,
+                            "SFTP upload succeeded, but local backup cleanup failed", e);
                 }
-            } catch (IOException e) {
-                sender.sendMessage(OperationHandler.processMessage("Error.SftpUploadFailed"));
-                e.printStackTrace();
             }
-
         } catch (IOException e) {
-            sender.sendMessage(OperationHandler.processMessage("Error.SftpUploadFailed"));
-            e.printStackTrace();
+            if (sftpClient == null) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpConnectionFailed"));
+            } else {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpUploadFailed"));
+            }
+            ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "SFTP operation failed", e);
         } finally {
+            if (taskAdded) {
+                OperationHandler.tasks.remove(task);
+            }
             try {
                 disconnect(sftpClient, sshClient);
             } catch (IOException e) {
-                // TODO: Handle exception here
-                e.printStackTrace();
+                ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "Could not close SFTP connection", e);
             }
         }
     }
@@ -128,6 +164,11 @@ public class SftpManager {
     public void downloadFileFromSftp(String filePath) {
         File file = new File(filePath);
 
+        if (!isSafeFileName(file.getName()) || !file.getName().equals(filePath)) {
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpNotFound").replaceAll("%file%", file.getName()));
+            return;
+        }
+
         SSHClient sshClient = new SSHClient();
         SFTPClient sftpClient = null;
 
@@ -136,8 +177,8 @@ public class SftpManager {
 
             boolean exists = false;
 
-            for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
-                if (backup.getName().equalsIgnoreCase(file.getName())) {
+            for (RemoteResourceInfo backup : sftpClient.ls(workingDir, RemoteResourceInfo::isRegularFile)) {
+                if (backup.getName().equals(file.getName())) {
                     exists = true;
                 }
             }
@@ -150,25 +191,28 @@ public class SftpManager {
 
             sender.sendMessage(OperationHandler.processMessage("Info.SftpDownload").replaceAll("%file%", file.getName()));
 
-            File dFile = new File(Configuration.backupDestination + "//" + file.getPath());
+            File dFile = new File(Configuration.backupDestination, file.getName());
+            if (Files.isSymbolicLink(dFile.toPath())) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SftpDownloadFailed"));
+                return;
+            }
 
             try {
                 sftpClient.get(getRemotePath(filePath), dFile.getAbsolutePath());
                 sender.sendMessage(OperationHandler.processMessage("Info.SftpDownloadSuccess"));
             } catch (IOException e) {
                 sender.sendMessage(OperationHandler.processMessage("Error.SftpDownloadFailed"));
-                e.printStackTrace();
+                ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "SFTP download failed", e);
             }
 
         } catch (IOException e) {
-            sender.sendMessage(OperationHandler.processMessage("Error.SftpDownloadFailed"));
-            e.printStackTrace();
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpConnectionFailed"));
+            ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "SFTP download operation failed", e);
         } finally {
             try {
                 disconnect(sftpClient, sshClient);
             } catch (IOException e) {
-                // TODO: Handle exception here
-                e.printStackTrace();
+                ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "Could not close SFTP connection", e);
             }
         }
     }
@@ -186,6 +230,11 @@ public class SftpManager {
     public void deleteFile(String filePath) {
         File file = new File(filePath);
 
+        if (!isSafeFileName(file.getName()) || !file.getName().equals(filePath)) {
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpNotFound").replaceAll("%file%", file.getName()));
+            return;
+        }
+
         SSHClient sshClient = new SSHClient();
         SFTPClient sftpClient = null;
 
@@ -194,8 +243,8 @@ public class SftpManager {
 
             boolean exists = false;
 
-            for (RemoteResourceInfo backup : sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile)) {
-                if (backup.getName().equalsIgnoreCase(file.getName())) {
+            for (RemoteResourceInfo backup : sftpClient.ls(workingDir, RemoteResourceInfo::isRegularFile)) {
+                if (backup.getName().equals(file.getName())) {
                     exists = true;
                 }
             }
@@ -206,7 +255,7 @@ public class SftpManager {
                 return;
             }
 
-            sender.sendMessage(OperationHandler.processMessage("Info.FtpDeletion").replaceAll("%file%", file.getName()));
+            sender.sendMessage(OperationHandler.processMessage("Info.SftpDeletion").replaceAll("%file%", file.getName()));
 
             try {
                 sftpClient.rm(getRemotePath(filePath));
@@ -215,14 +264,13 @@ public class SftpManager {
                 sender.sendMessage(OperationHandler.processMessage("Error.SftpDeletionFailed"));
             }
         } catch (IOException e) {
-            sender.sendMessage(OperationHandler.processMessage("Error.SftpDeletionFailed"));
-            e.printStackTrace();
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpConnectionFailed"));
+            ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "SFTP delete operation failed", e);
         } finally {
             try {
                 disconnect(sftpClient, sshClient);
             } catch (IOException e) {
-                // TODO: Handle exception here
-                e.printStackTrace();
+                ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "Could not close SFTP connection", e);
             }
         }
     }
@@ -248,7 +296,7 @@ public class SftpManager {
         try {
             sftpClient = connect(sshClient);
 
-            List<RemoteResourceInfo> files = sftpClient.ls(working_dir, RemoteResourceInfo::isRegularFile);
+            List<RemoteResourceInfo> files = sftpClient.ls(workingDir, RemoteResourceInfo::isRegularFile);
 
             int c = 1;
 
@@ -265,14 +313,13 @@ public class SftpManager {
                 c++;
             }
         } catch (IOException e) {
-            // TODO: Handle exception here
-            e.printStackTrace();
+            sender.sendMessage(OperationHandler.processMessage("Error.SftpConnectionFailed"));
+            ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "SFTP list operation failed", e);
         } finally {
             try {
                 disconnect(sftpClient, sshClient);
             } catch (IOException e) {
-                // TODO: Handle exception here
-                e.printStackTrace();
+                ServerBackup.getInstance().getLogger().log(java.util.logging.Level.WARNING, "Could not close SFTP connection", e);
             }
         }
         return backups;
@@ -299,28 +346,15 @@ public class SftpManager {
      * @throws IOException if the connection, authentication, or host key verification fails
      */
     private SFTPClient connect(SSHClient sshClient) throws IOException {
+        if (server == null || server.isBlank() || user == null || user.isBlank()
+                || fingerprint == null || fingerprint.isBlank()
+                || fingerprint.contains("xxxxxxxx")) {
+            throw new IOException("SFTP configuration is incomplete; a valid host fingerprint is required");
+        }
 
-        // Create verifier for host key from config
-        HostKeyVerifier verifier = new HostKeyVerifier() {
-            @Override
-            public boolean verify(String hostname, int port, PublicKey key) {
-                return true;
-
-                // TODO: FIND A SOLUTION TO CHECK FINGERPRINTS, OR A WAY TO LOAD "BouncyCastle"
-
-                /*
-                String actualFingerprint = SecurityUtils.getFingerprint(key);
-                return actualFingerprint.equals(fingerprint);
-                 */
-            }
-
-            @Override
-            public List<String> findExistingAlgorithms(String s, int i) {
-                return List.of();
-            }
-        };
-
-        sshClient.addHostKeyVerifier(verifier);
+        // SSHJ performs the fingerprint comparison before authentication.
+        // Never replace this with an accept-all HostKeyVerifier.
+        sshClient.addHostKeyVerifier(fingerprint.trim());
 
         // establish connection
         sshClient.connect(server, port);
