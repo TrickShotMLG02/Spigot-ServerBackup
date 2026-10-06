@@ -110,6 +110,9 @@ public class SftpManager {
             taskAdded = true;
 
             FileSystemFile localFile = new FileSystemFile(file);
+            // Let the SFTP server apply its default permissions and timestamps.
+            // Some servers allow writing file contents but deny SSHJ's post-upload SETSTAT.
+            sftpClient.getFileTransfer().setPreserveAttributes(false);
             sftpClient.put(localFile, getRemotePath(file.getName()));
             sender.sendMessage(OperationHandler.processMessage("Info.SftpUploadSuccess"));
 

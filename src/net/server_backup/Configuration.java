@@ -122,7 +122,7 @@ public class Configuration {
         ServerBackup.getInstance().getConfig().addDefault("Sftp.UploadBackup", false);
         ServerBackup.getInstance().getConfig().addDefault("Sftp.DeleteLocalBackup", false);
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.IP", "127.0.0.1");
-        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Port", 21);
+        ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Port", 22);
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.User", "username");
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Password", "password");
         ServerBackup.getInstance().getConfig().addDefault("Sftp.Server.Fingerprint", "SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
