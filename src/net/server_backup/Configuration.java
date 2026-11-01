@@ -119,6 +119,16 @@ public class Configuration {
         ServerBackup.getInstance().getConfig().addDefault("Ftp.Server.Password", "password");
         ServerBackup.getInstance().getConfig().addDefault("Ftp.Server.BackupDirectory", "Backups/");
 
+        ServerBackup.getInstance().getConfig().addDefault("Smb.UploadBackup", false);
+        ServerBackup.getInstance().getConfig().addDefault("Smb.DeleteLocalBackup", false);
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.Host", "127.0.0.1");
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.Port", 445);
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.Share", "Backups");
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.Domain", "");
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.User", "username");
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.Password", "password");
+        ServerBackup.getInstance().getConfig().addDefault("Smb.Server.Directory", "");
+
         ServerBackup.getInstance().getConfig().addDefault("DynamicBackup", false);
         ServerBackup.getInstance().getConfig().addDefault("SendLogMessages", false);
 

@@ -4,6 +4,7 @@ import net.server_backup.Configuration;
 import net.server_backup.ServerBackup;
 import net.server_backup.utils.DropboxManager;
 import net.server_backup.utils.FtpManager;
+import net.server_backup.utils.SmbManager;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -177,6 +178,10 @@ public class ZipManager {
             if (ServerBackup.getInstance().getConfig().getBoolean("Ftp.UploadBackup")) {
                 FtpManager ftpm = new FtpManager(sender);
                 ftpm.uploadFileToFtp(targetFilePath, false);
+            }
+
+            if (ServerBackup.getInstance().getConfig().getBoolean("Smb.UploadBackup")) {
+                new SmbManager(sender).uploadBackup(targetFilePath);
             }
 
             if (ServerBackup.getInstance().getConfig().getBoolean("CloudBackup.Dropbox")) {
