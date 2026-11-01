@@ -41,7 +41,7 @@ public class Executor implements CommandExecutor {
                         Bukkit.dispatchCommand(sender, "backup ftp list 1");
                     }
                 } else if (args[0].equalsIgnoreCase("smb") && args[1].equalsIgnoreCase("list")) {
-                    Bukkit.dispatchCommand(sender, "backup smb list");
+                    CommandSmb.execute(sender, new String[] {"smb", "list", "1"});
                 } else if (args[0].equalsIgnoreCase("zip")) {
                     CommandZip.execute(sender, args);
                 } else if (args[0].equalsIgnoreCase("unzip")) {
