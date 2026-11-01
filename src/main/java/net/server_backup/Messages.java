@@ -42,6 +42,8 @@ public class Messages {
         messages.addDefault("Info.FtpDownloadSuccess", "Ftp: Download successful. Backup downloaded from ftp server.");
         messages.addDefault("Info.SftpUpload", "Sftp: Uploading backup [%file%] ...");
         messages.addDefault("Info.SftpUploadSuccess", "Sftp: Upload successfully. Backup stored on sftp server.");
+        messages.addDefault("Info.SmbUpload", "SMB: Uploading backup [%file%] ...");
+        messages.addDefault("Info.SmbUploadSuccess", "SMB: Backup uploaded successfully.");
         messages.addDefault("Info.SftpDownload", "Sftp: Downloading backup [%file%] ...");
         messages.addDefault("Info.SftpDownloadSuccess", "Sftp: Download successful. Backup downloaded from sftp server.");
 
@@ -69,6 +71,8 @@ public class Messages {
         messages.addDefault("Error.SftpLocalDeletionFailed", "Sftp: Local backup deletion failed because the uploaded file was not found on the sftp server. Try again.");
         messages.addDefault("Error.SftpNotFound", "Sftp: sftp-backup %file% not found.");
         messages.addDefault("Error.SftpConnectionFailed", "Sftp: Error while connecting to SFTP server.");
+        messages.addDefault("Error.SmbUploadFailed", "SMB: Upload failed. Check the SMB host, share, credentials, and permissions.");
+        messages.addDefault("Error.SmbLocalDeletionFailed", "SMB: Upload succeeded, but the local backup could not be deleted.");
 
         Configuration.saveMessages();
 
