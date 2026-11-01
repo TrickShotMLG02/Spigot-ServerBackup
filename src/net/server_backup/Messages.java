@@ -39,6 +39,9 @@ public class Messages {
         messages.addDefault("Info.FtpUpload", "Ftp: Uploading backup [%file%] ...");
         messages.addDefault("Info.SmbUpload", "SMB: Uploading backup [%file%] ...");
         messages.addDefault("Info.SmbUploadSuccess", "SMB: Backup uploaded successfully.");
+        messages.addDefault("Info.SmbDownloadSuccess", "SMB: Backup downloaded successfully.");
+        messages.addDefault("Info.SmbUpload", "SMB: Uploading backup [%file%] ...");
+        messages.addDefault("Info.SmbUploadSuccess", "SMB: Backup uploaded successfully.");
         messages.addDefault("Info.FtpUploadSuccess", "Ftp: Upload successfully. Backup stored on ftp server.");
         messages.addDefault("Info.FtpDownload", "Ftp: Downloading backup [%file%] ...");
         messages.addDefault("Info.FtpDownloadSuccess", "Ftp: Download successful. Backup downloaded from ftp server.");
@@ -61,6 +64,11 @@ public class Messages {
         messages.addDefault("Error.FtpLocalDeletionFailed", "Ftp: Local backup deletion failed because the uploaded file was not found on the ftp server. Try again.");
         messages.addDefault("Error.FtpNotFound", "Ftp: ftp-backup %file% not found.");
         messages.addDefault("Error.FtpConnectionFailed", "Ftp: Error while connecting to FTP server.");
+        messages.addDefault("Error.SmbUploadFailed", "SMB: Upload failed. Check the SMB host, share, credentials, and permissions.");
+        messages.addDefault("Error.SmbLocalDeletionFailed", "SMB: Upload succeeded, but the local backup could not be deleted.");
+        messages.addDefault("Error.NoSmbBackups", "No SMB backups found.");
+        messages.addDefault("Error.SmbNotFound", "SMB backup %file% not found.");
+        messages.addDefault("Error.SmbDownloadFailed", "SMB: Download failed. Check the SMB connection and permissions.");
         messages.addDefault("Error.SmbUploadFailed", "SMB: Upload failed. Check the SMB host, share, credentials, and permissions.");
         messages.addDefault("Error.SmbLocalDeletionFailed", "SMB: Upload succeeded, but the local backup could not be deleted.");
 
