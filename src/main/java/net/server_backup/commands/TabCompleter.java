@@ -3,6 +3,7 @@ package net.server_backup.commands;
 import net.server_backup.Configuration;
 import net.server_backup.utils.FtpManager;
 import net.server_backup.utils.SftpManager;
+import net.server_backup.utils.SmbManager;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -32,6 +33,7 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                 commands.add("unzip");
                 commands.add("ftp");
                 commands.add("sftp");
+                commands.add("smb");
                 commands.add("dropbox");
                 commands.add("tasks");
                 commands.add("shutdown");
@@ -88,6 +90,10 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                     commands.add("list");
                     commands.add("download");
                     commands.add("upload");
+                } else if (args[0].equalsIgnoreCase("smb")) {
+                    commands.add("list");
+                    commands.add("download");
+                    commands.add("upload");
                 } else if (args[0].equalsIgnoreCase("dropbox")) {
                     commands.add("upload");
                 }
@@ -130,6 +136,15 @@ public class TabCompleter implements org.bukkit.command.TabCompleter {
                                 commands.add(backup.getName());
                             }
                         }
+                    }
+
+                } else if (args[0].equalsIgnoreCase("smb")) {
+                    SmbManager smb = new SmbManager(sender);
+                    if (args[1].equalsIgnoreCase("download")) {
+                        for (String backup : smb.getSmbBackupList()) commands.add(backup.split(" ")[0]);
+                    } else if (args[1].equalsIgnoreCase("upload")) {
+                        File[] backups = new File(Configuration.backupDestination).listFiles();
+                        if (backups != null) for (File backup : backups) if (backup.isFile()) commands.add(backup.getName());
                     }
 
                 } else if (args[0].equalsIgnoreCase("dropbox")) {

@@ -44,6 +44,8 @@ public class Executor implements CommandExecutor {
                     if (args[1].equalsIgnoreCase("list")) {
                         Bukkit.dispatchCommand(sender, "backup sftp list 1");
                     }
+                } else if (args[0].equalsIgnoreCase("smb")) {
+                    if (args[1].equalsIgnoreCase("list")) Bukkit.dispatchCommand(sender, "backup smb list");
                 } else if (args[0].equalsIgnoreCase("zip")) {
                     CommandZip.execute(sender, args);
                 } else if (args[0].equalsIgnoreCase("unzip")) {
@@ -60,6 +62,8 @@ public class Executor implements CommandExecutor {
                     CommandFtp.execute(sender, args);
                 }  else if (args[0].equalsIgnoreCase("sftp")) {
                     CommandSftp.execute(sender, args);
+                } else if (args[0].equalsIgnoreCase("smb")) {
+                    CommandSmb.execute(sender, args);
                 } else if (args[0].equalsIgnoreCase("dropbox")) {
                     CommandDropbox.execute(sender, args);
                 }
@@ -92,6 +96,8 @@ public class Executor implements CommandExecutor {
         sender.sendMessage("/backup ftp <download/upload/list> - download, upload or list ftp backup files");
         sender.sendMessage("");
         sender.sendMessage("/backup sftp <download/upload/list> - download, upload or list sftp backup files");
+        sender.sendMessage("");
+        sender.sendMessage("/backup smb <download/upload/list> - download, upload or list SMB backup files");
         sender.sendMessage("");
         sender.sendMessage("/backup dropbox upload <file> - upload a backup to dropbox");
         sender.sendMessage("");

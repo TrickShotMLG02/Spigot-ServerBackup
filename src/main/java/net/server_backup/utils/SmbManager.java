@@ -3,6 +3,7 @@ package net.server_backup.utils;
 import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SmbFile;
 import jcifs.smb.SmbFileOutputStream;
+import jcifs.smb.SmbFileInputStream;
 import jcifs.CIFSContext;
 import jcifs.context.SingletonContext;
 import net.server_backup.ServerBackup;
@@ -13,8 +14,9 @@ import org.bukkit.command.CommandSender;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.OutputStream;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 /** SMB2/3 backup uploader. Credentials are supplied through jcifs authentication, never embedded in URLs. */
@@ -67,6 +69,61 @@ public final class SmbManager {
             sender.sendMessage(OperationHandler.processMessage("Error.SmbUploadFailed"));
         } finally {
             OperationHandler.tasks.remove(task);
+        }
+    }
+
+    private SmbFile getFolder() throws Exception {
+        String host = ServerBackup.getInstance().getConfig().getString("Smb.Server.Host", "").trim();
+        String share = ServerBackup.getInstance().getConfig().getString("Smb.Server.Share", "").trim();
+        String directory = ServerBackup.getInstance().getConfig().getString("Smb.Server.Directory", "").trim();
+        int port = ServerBackup.getInstance().getConfig().getInt("Smb.Server.Port", 445);
+        if (!host.matches("[A-Za-z0-9._:-]+") || !share.matches("[A-Za-z0-9_$.-]+") || port < 1 || port > 65535
+                || directory.startsWith("/") || directory.contains("..") || directory.contains("\\")) {
+            throw new IllegalArgumentException("Invalid SMB endpoint or directory");
+        }
+        CIFSContext base = SingletonContext.getInstance();
+        CIFSContext context = base.withCredentials(new NtlmPasswordAuthentication(base,
+                ServerBackup.getInstance().getConfig().getString("Smb.Server.Domain", ""),
+                ServerBackup.getInstance().getConfig().getString("Smb.Server.User", ""),
+                ServerBackup.getInstance().getConfig().getString("Smb.Server.Password", "")));
+        return new SmbFile("smb://" + host + ":" + port + "/" + share + "/"
+                + (directory.isEmpty() ? "" : directory.replaceAll("/+$", "") + "/"), context);
+    }
+
+    public List<String> getSmbBackupList() {
+        List<String> backups = new ArrayList<>();
+        try {
+            for (SmbFile remote : getFolder().listFiles()) {
+                if (remote.isFile()) backups.add(remote.getName() + " " + (remote.length() / 1000000.0) + "MB");
+            }
+        } catch (Exception e) {
+            Bukkit.getLogger().log(Level.WARNING, "SMB backup listing failed: " + e.getMessage());
+        }
+        return backups;
+    }
+
+    public void downloadBackup(String name) {
+        if (name == null || name.isEmpty() || name.contains("/") || name.contains("\\") || name.equals(".") || name.equals("..")) {
+            sender.sendMessage(OperationHandler.processMessage("Error.SmbDownloadFailed"));
+            return;
+        }
+        File destination = new File(net.server_backup.Configuration.backupDestination, name);
+        try {
+            SmbFile remote = new SmbFile(getFolder(), name);
+            if (!remote.isFile()) {
+                sender.sendMessage(OperationHandler.processMessage("Error.SmbNotFound").replace("%file%", name));
+                return;
+            }
+            try (SmbFileInputStream in = new SmbFileInputStream(remote); FileOutputStream out = new FileOutputStream(destination)) {
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+            }
+            if (destination.length() != remote.length()) throw new java.io.IOException("Downloaded size verification failed");
+            sender.sendMessage(OperationHandler.processMessage("Info.SmbDownloadSuccess"));
+        } catch (Exception e) {
+            Bukkit.getLogger().log(Level.WARNING, "SMB backup download failed: " + e.getMessage());
+            sender.sendMessage(OperationHandler.processMessage("Error.SmbDownloadFailed"));
         }
     }
 }
